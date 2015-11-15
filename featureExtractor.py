@@ -1,3 +1,5 @@
+from __future__ import division
+
 import csv
 import matplotlib.pyplot as plt
 import numpy as np
@@ -12,11 +14,14 @@ class Features:
     # Constructor to initialize the features
     def __init__(self, _id):
         self.driverTripId = _id
+        self.featuresList = np.array([])
+        # Distance Features
         self.distanceList = np.array([])
         self.totalDistance = 0
         self.totalTripTime = 0
         self.tripDisplacement = 0
-        self.featuresList = np.array([])
+        self.totalStandingTime = 0
+        self.stopRatio = 0
         # Speed features
         self.meanSpeed = 0
         self.meanSpeedNotStopped = 0
@@ -39,6 +44,21 @@ class Features:
         self.computeDistanceFeatures()
         self.computeSpeedFeatures()
         self.computeAccelerationFeatures()
+        self.composeFeatures()
+
+    # Function to build the featureList for saving to csv
+    def composeFeatures(self):
+        self.featureList = [self.driverTripId, self.totalDistance, self.totalTripTime, self.tripDisplacement, 
+                            self.totalStandingTime, self.stopRatio, self.meanSpeed,  self.meanSpeedNotStopped, 
+                            self.stdDevSpeed, self.maxSpeed
+                            ]
+        self.featureList.extend(self.speedPercentiles)
+        self.featureList.extend([self.meanAcceleration, self.stdDevAcceleration])
+        self.featureList.extend(self.accelerationPercentiles)
+        self.featureList.extend([self.meanPosAcceleration, self.stdDevPosAcceleration])
+        self.featureList.extend(self.posAccelerationPercentiles)
+        self.featureList.extend([self.meanNegAcceleration, self.stdDevNegAcceleration])
+        self.featureList.extend(self.negAccelerationPercentiles)
 
     # Function to compute the distance features
     def computeDistanceFeatures(self):
@@ -64,7 +84,12 @@ class Features:
 
         self.distanceList = np.sqrt(sqX+sqY)
         self.totalDistance = np.sum(self.distanceList)
-        self.tripDisplacement = np.sqrt( (X[-1]-X[0]) + (Y[-1]-Y[0]) )
+        self.tripDisplacement = np.sqrt(pow(X[-1]-X[0], 2) + pow(Y[-1]-Y[0], 2))
+
+        stopFunc = np.vectorize(lambda x: x < self.stopThreshold)
+
+        self.totalStandingTime = np.sum(stopFunc(self.distanceList))
+        self.stopRatio = self.totalStandingTime / self.totalTripTime
 
     # Function to compute the speed features
     def computeSpeedFeatures(self):
@@ -160,11 +185,8 @@ class Features:
         return X, Y
 
     # Function to save the features to the corresponding driver file.
-    def writeCsv(self):
-        driverId, tripId = self.driverTripId.split('_')
-        featureFileName = self.baseFeatureFolder + driverId + '.csv'
-        print "Done"
-
+    def writeCsv(self, csvWriter):
+        csvWriter.writerow(self.featureList)
 
 def plotTrip(data):
     X = [x[0] for x in data]
@@ -182,9 +204,38 @@ if __name__ == "__main__":
         if driver.startswith('.'):
             continue
 
+        print "Processing for driver: ", driver
+
         # Read the individual driver folder to process all the trips
         tripData = os.listdir(Features.baseDriversFolder + driver)
-        numTrips = len(tripData)
+
+        # Open a feature file for a driver to write all the trip features as a csv
+        featureFileName = Features.baseFeatureFolder + driver + '.csv'
+        outFile = open(featureFileName, 'wb')
+        featureWriter = csv.writer(outFile, delimiter=',',quotechar='"', quoting=csv.QUOTE_MINIMAL)
+        featureWriter.writerow(['driverTripId', 'totalDistance', 'totalTripTime', 'tripDisplacement',
+                                 'totalStandingTime', 'stopRatio', 'meanSpeed', 'meanSpeedNotStopped',
+                                 'stdDevSpeed', 'maxSpeed', 'speedPercentiles5th', 'speedPercentiles10th', 
+                                 'speedPercentiles25th', 'speedPercentiles50th', 'speedPercentiles75th', 
+                                 'speedPercentiles85th', 'speedPercentiles90th', 'speedPercentiles95th', 
+                                 'speedPercentiles97th', 'speedPercentiles98th', 'speedPercentiles99th', 
+                                 'speedPercentiles100th', 'meanAcceleration', 'stdDevAcceleration', 
+                                 'accelerationPercentiles5th', 'accelerationPercentiles10th', 'accelerationPercentiles25th', 
+                                 'accelerationPercentiles50th', 'accelerationPercentiles75th',
+                                 'accelerationPercentiles85th', 'accelerationPercentiles90th', 'accelerationPercentiles95th',
+                                 'accelerationPercentiles97th', 'accelerationPercentiles98th', 'accelerationPercentiles99th',
+                                 'accelerationPercentiles100th', 'meanPosAcceleration', 'stdDevPosAcceleration', 
+                                 'posAccelerationPercentiles5th', 'posAccelerationPercentiles10th', 
+                                 'posAccelerationPercentiles25th', 'posAccelerationPercentiles50th', 'posAccelerationPercentiles75th',
+                                 'posAccelerationPercentiles85th', 'posAccelerationPercentiles90th', 'posAccelerationPercentiles95th', 
+                                 'posAccelerationPercentiles97th','posAccelerationPercentiles98th', 'posAccelerationPercentiles99th',
+                                 'posAccelerationPercentiles100th', 'meanNegAcceleration', 'stdDevNegAcceleration', 
+                                 'negAccelerationPercentiles5th', 'negAccelerationPercentiles10th', 
+                                 'negAccelerationPercentiles25th', 'negAccelerationPercentiles50th', 'negAccelerationPercentiles75th',
+                                 'negAccelerationPercentiles85th', 'negAccelerationPercentiles90th', 'negAccelerationPercentiles95th',
+                                 'negAccelerationPercentiles97th', 'negAccelerationPercentiles98th', 'negAccelerationPercentiles99th',
+                                 'negAccelerationPercentiles100th',
+                               ])
 
         for trip in tripData:
             # sanity check to skip '.DS_Store' file in Mac
@@ -200,4 +251,7 @@ if __name__ == "__main__":
             genFeatures.computeFeatures()
 
             # save them to feature file
-            genFeatures.writeCsv()
+            genFeatures.writeCsv(featureWriter)
+
+        # Close the feature file after processing
+        outFile.close()
