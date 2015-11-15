@@ -1,3 +1,5 @@
+from __future__ import division
+
 import csv
 import matplotlib.pyplot as plt
 import numpy as np
@@ -42,6 +44,21 @@ class Features:
         self.computeDistanceFeatures()
         self.computeSpeedFeatures()
         self.computeAccelerationFeatures()
+        self.composeFeatures()
+
+    # Function to build the featureList for saving to csv
+    def composeFeatures(self):
+        self.featureList = [self.driverTripId, self.totalDistance, self.totalTripTime, self.tripDisplacement, 
+                            self.totalStandingTime, self.stopRatio, self.meanSpeed,  self.meanSpeedNotStopped, 
+                            self.stdDevSpeed, self.maxSpeed
+                            ]
+        self.featureList.extend(self.speedPercentiles)
+        self.featureList.extend([self.meanAcceleration, self.stdDevAcceleration])
+        self.featureList.extend(self.accelerationPercentiles)
+        self.featureList.extend([self.meanPosAcceleration, self.stdDevPosAcceleration])
+        self.featureList.extend(self.posAccelerationPercentiles)
+        self.featureList.extend([self.meanNegAcceleration, self.stdDevNegAcceleration])
+        self.featureList.extend(self.negAccelerationPercentiles)
 
     # Function to compute the distance features
     def computeDistanceFeatures(self):
@@ -169,13 +186,7 @@ class Features:
 
     # Function to save the features to the corresponding driver file.
     def writeCsv(self, csvWriter):
-        csvWriter.writerow([self.driverTripId, self.totalDistance, self.totalTripTime, self.tripDisplacement, 
-                            self.totalStandingTime, self.stopRatio, self.meanSpeed,  self.meanSpeedNotStopped, 
-                            self.stdDevSpeed, self.maxSpeed, str(self.speedPercentiles), self.meanAcceleration,
-                            self.stdDevAcceleration, str(self.accelerationPercentiles), self.meanPosAcceleration,
-                            self.stdDevPosAcceleration, self.posAccelerationPercentiles, self.meanNegAcceleration, 
-                            self.stdDevNegAcceleration, str(self.negAccelerationPercentiles)
-                            ])
+        csvWriter.writerow(self.featureList)
 
 def plotTrip(data):
     X = [x[0] for x in data]
@@ -204,10 +215,26 @@ if __name__ == "__main__":
         featureWriter = csv.writer(outFile, delimiter=',',quotechar='"', quoting=csv.QUOTE_MINIMAL)
         featureWriter.writerow(['driverTripId', 'totalDistance', 'totalTripTime', 'tripDisplacement',
                                  'totalStandingTime', 'stopRatio', 'meanSpeed', 'meanSpeedNotStopped',
-                                 'stdDevSpeed', 'maxSpeed', 'speedPercentiles', 'meanAcceleration', 
-                                 'stdDevAcceleration', 'accelerationPercentiles', 'meanPosAcceleration',
-                                 'stdDevPosAcceleration', 'posAccelerationPercentiles', 'meanNegAcceleration',
-                                 'stdDevNegAcceleration', 'negAccelerationPercentiles'
+                                 'stdDevSpeed', 'maxSpeed', 'speedPercentiles5th', 'speedPercentiles10th', 
+                                 'speedPercentiles25th', 'speedPercentiles50th', 'speedPercentiles75th', 
+                                 'speedPercentiles85th', 'speedPercentiles90th', 'speedPercentiles95th', 
+                                 'speedPercentiles97th', 'speedPercentiles98th', 'speedPercentiles99th', 
+                                 'speedPercentiles100th', 'meanAcceleration', 'stdDevAcceleration', 
+                                 'accelerationPercentiles5th', 'accelerationPercentiles10th', 'accelerationPercentiles25th', 
+                                 'accelerationPercentiles50th', 'accelerationPercentiles75th',
+                                 'accelerationPercentiles85th', 'accelerationPercentiles90th', 'accelerationPercentiles95th',
+                                 'accelerationPercentiles97th', 'accelerationPercentiles98th', 'accelerationPercentiles99th',
+                                 'accelerationPercentiles100th', 'meanPosAcceleration', 'stdDevPosAcceleration', 
+                                 'posAccelerationPercentiles5th', 'posAccelerationPercentiles10th', 
+                                 'posAccelerationPercentiles25th', 'posAccelerationPercentiles50th', 'posAccelerationPercentiles75th',
+                                 'posAccelerationPercentiles85th', 'posAccelerationPercentiles90th', 'posAccelerationPercentiles95th', 
+                                 'posAccelerationPercentiles97th','posAccelerationPercentiles98th', 'posAccelerationPercentiles99th',
+                                 'posAccelerationPercentiles100th', 'meanNegAcceleration', 'stdDevNegAcceleration', 
+                                 'negAccelerationPercentiles5th', 'negAccelerationPercentiles10th', 
+                                 'negAccelerationPercentiles25th', 'negAccelerationPercentiles50th', 'negAccelerationPercentiles75th',
+                                 'negAccelerationPercentiles85th', 'negAccelerationPercentiles90th', 'negAccelerationPercentiles95th',
+                                 'negAccelerationPercentiles97th', 'negAccelerationPercentiles98th', 'negAccelerationPercentiles99th',
+                                 'negAccelerationPercentiles100th',
                                ])
 
         for trip in tripData:
@@ -225,3 +252,6 @@ if __name__ == "__main__":
 
             # save them to feature file
             genFeatures.writeCsv(featureWriter)
+
+        # Close the feature file after processing
+        outFile.close()
