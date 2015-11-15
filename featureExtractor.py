@@ -1,11 +1,14 @@
 import csv
 import matplotlib.pyplot as plt
 import numpy as np
+<<<<<<< HEAD
 import os
 
 class Features:
     baseDriversFolder = "drivers/"
     baseFeatureFolder = "features/"
+    # Threshold value to indicate that the vehicle is stopped
+    stopThreshold = 1.5
 
     # Constructor to initialize the features
     def __init__(self, _id):
@@ -15,12 +18,30 @@ class Features:
         self.totalTripTime = 0
         self.tripDisplacement = 0
         self.featuresList = np.array([])
+        # Speed features
+        self.meanSpeed = 0
+        self.meanSpeedNotStopped = 0
+        self.stdDevSpeed = 0
+        self.maxSpeed = 0
+        self.speedPercentiles = [] # 5th, 10th, 25th, 50th, 75th, 85th, 90th, 95th, 97th, 98th, 99th, 100th percentiles of speed
+        # Acceleration features
+        self.meanAcceleration = 0
+        self.stdDevAcceleration = 0
+        self.accelerationPercentiles = []
+        self.meanPosAcceleration = 0
+        self.stdDevPosAcceleration = 0
+        self.posAccelerationPercentiles = []
+        self.meanNegAcceleration = 0
+        self.stdDevNegAcceleration = 0
+        self.negAccelerationPercentiles = []
 
     # Template function to compute all features
     def computeFeatures(self):
         self.computeDistanceFeatures()
+        self.computeSpeedFeatures()
+        self.computeAccelerationFeatures()
 
-    # Function to compute the features
+    # Function to compute the distance features
     def computeDistanceFeatures(self):
         # construct the folder and trip file to read as per the driverTripId
         driverId, tripId = self.driverTripId.split('_')
@@ -44,9 +65,83 @@ class Features:
 
         self.distanceList = np.sqrt(sqX+sqY)
         self.totalDistance = np.sum(self.distanceList)
-
         self.tripDisplacement = np.sqrt( (X[-1]-X[0]) + (Y[-1]-Y[0]) )
-        
+
+    # Function to compute the speed features
+    def computeSpeedFeatures(self):
+        # Average speed
+        self.meanSpeed = np.mean(self.distanceList)
+
+        # Average speed when vehicle not stopped
+        self.meanSpeedNotStopped = np.mean(self.distanceList[self.distanceList > self.stopThreshold])
+
+        # Calculate standard deviation of instantaneous speed
+        self.stdDevSpeed = np.std(self.distanceList)
+
+        # Maximum speed
+        self.maxSpeed = max(self.distanceList)
+
+        # Speed percentiles
+        self.speedPercentiles = self.computePercentiles(self.distanceList)
+
+    # Function to compute the acceleration features
+    def computeAccelerationFeatures(self):
+        # Instantaneous acceleration
+        instantAcceleration = np.diff(self.distanceList)
+
+        # Mean, std dev, percentiles of overall acceleration
+        self.meanAcceleration = np.mean(instantAcceleration)
+        self.stdDevAcceleration = np.std(instantAcceleration)
+        self.accelerationPercentiles = self.computePercentiles(instantAcceleration)
+
+        # Mean, std dev, percentiles of positive acceleration
+        positiveAcceleration = instantAcceleration[instantAcceleration > 0]
+        self.meanPosAcceleration = np.mean(positiveAcceleration)
+        self.stdDevPosAcceleration = np.std(positiveAcceleration)
+        self.posAccelerationPercentiles = self.computePercentiles(positiveAcceleration)
+
+        # Mean, std dev, percentiles of negative acceleration
+        negativeAcceleration = instantAcceleration[instantAcceleration < 0]
+        self.meanNegAcceleration = np.mean(negativeAcceleration)
+        self.stdDevNegAcceleration = np.std(negativeAcceleration)
+        self.negAccelerationPercentiles = self.computePercentiles(negativeAcceleration)
+
+    # Function to compute percentiles
+    def computePercentiles(self, values):
+        percentiles = [ np.percentile(values, 5),
+                        np.percentile(values, 10),
+                        np.percentile(values, 25),
+                        np.percentile(values, 50),
+                        np.percentile(values, 75),
+                        np.percentile(values, 85),
+                        np.percentile(values, 90),
+                        np.percentile(values, 95),
+                        np.percentile(values, 97),
+                        np.percentile(values, 98),
+                        np.percentile(values, 99),
+                        np.percentile(values, 100) ]
+        return percentiles
+
+    # Print feature values
+    def printFeatures(self):
+        print "Speed"
+        print self.meanSpeed
+        print self.meanSpeedNotStopped
+        print self.stdDevSpeed
+        print self.maxSpeed
+        print self.speedPercentiles
+
+        print "Acceleration"
+        print self.meanAcceleration
+        print self.stdDevAcceleration
+        print self.accelerationPercentiles
+        print self.meanPosAcceleration
+        print self.stdDevPosAcceleration
+        print self.posAccelerationPercentiles
+        print self.meanNegAcceleration
+        print self.stdDevNegAcceleration
+        print self.negAccelerationPercentiles
+
     # Function to read data from csv and return a list of co-ordinate points.
     # Each point is represented as a list of two values [x, y].
     def readCsv(self, filename):
@@ -87,7 +182,7 @@ if __name__ == "__main__":
         # sanity check to skip '.DS_Store' file in Mac
         if driver.startswith('.'):
             continue
-        
+
         # Read the individual driver folder to process all the trips
         tripData = os.listdir(Features.baseDriversFolder + driver)
         numTrips = len(tripData)
@@ -98,7 +193,7 @@ if __name__ == "__main__":
                 continue
 
             tripId = trip.split('.')[0]
-            
+
             # initialize a feature object
             genFeatures = Features(driver + '_' + tripId)
 
@@ -107,4 +202,3 @@ if __name__ == "__main__":
 
             # save them to feature file
             genFeatures.writeCsv()
-
