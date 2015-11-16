@@ -22,7 +22,7 @@ class Classifier:
         infileReader = csv.reader(infile, delimiter=',', quoting=csv.QUOTE_MINIMAL)
         infileReader.next()
         for line in infileReader:
-            self.featuresHash[line[0]] = np.array(map(float, line[1:]))
+            self.featuresHash[line[0]] = np.nan_to_num(np.array(map(float, line[1:])))
 
     def runSVMClassifier(self):
         X = self.featuresHash.values()
@@ -54,4 +54,3 @@ if __name__ == "__main__":
         testClf.runSVMClassifier()
         testClf.writeCsv(outputWriter)
     outFile.close()
-
