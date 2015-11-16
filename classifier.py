@@ -9,13 +9,14 @@ class Classifier:
 
     # Function to load the features from feature file
     def loadFeatures(self, _driverId):
-        featureFileName = baseFeatureFolder + _driverId + '.csv'
+        featureFileName = self.baseFeatureFolder + _driverId + '.csv'
         infile = open(featureFileName, 'r')
         infileReader = csv.reader(infile, delimiter=',', quoting=csv.QUOTE_MINIMAL)
+        infileReader.next()
         for line in infileReader:
-            self.featuresHash[line[0]] = np.array(map(float, line[1:-1]))
+            self.featuresHash[line[0]] = np.array(map(float, line[1:]))
 
 if __name__ == "__main__":
     testClf = Classifier()
     testClf.loadFeatures("1")
-    print len(testClf.featuresHash)
+    print testClf.featuresHash['1_1']
