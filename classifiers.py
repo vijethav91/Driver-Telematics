@@ -20,12 +20,12 @@ class Classifier(object):
         temp = {}
         self.label = []
         self.ids = []
-        
+
         featureFileName = self.baseFeatureFolder + _driverId
         infile = open(featureFileName, 'r')
         infileReader = csv.reader(infile, delimiter=',', quoting=csv.QUOTE_MINIMAL)
         infileReader.next()
-        
+
         for line in infileReader:
             temp[line[0]] = np.nan_to_num(np.array(map(float, line[1:])))
 
@@ -105,10 +105,22 @@ class SimpleLogisticRegression(Classifier):
         _Y = np.append(np.ones(200), np.zeros(numDrivers*numTrips))
         return _X, _Y
 
+    def samplerThree(self, _driverId, numTrips):
+        #print "Computing X,Y"
+        X = self.globalFeatureHash[_driverId].values()
+        secondaryFeatures = []
+        totalTrips = len(self.globalFeatureHash)*200
+        randomInt = np.random.random_integers(0, totalTrips-1, numTrips)
+        secondaryDriverKeys = map(lambda x:x/200, randomInt)
+        secondaryDriverIDs = map(lambda x:self.globalFeatureHash.keys()[x], secondaryDriverKeys)
+        secondaryTripKeys = map(lambda x:x%200, randomInt)
+        X.extend(map(lambda i:self.globalFeatureHash[secondaryDriverIDs[i]].values()[secondaryTripKeys[i]] , range(numTrips)))
+        Y = np.append(np.ones(200), np.zeros(numTrips))
+        return X, Y
+
     def runClassifier(self, _driverId, numDrivers=1, numTrips=1):
         X, Y = self.sampler(_driverId, numDrivers, numTrips)
         self.ids = self.globalFeatureHash[_driverId].keys()
         clf = LogisticRegression(class_weight='auto')
         model = clf.fit(X, Y)
         self.label = model.predict(X[:200])
-
