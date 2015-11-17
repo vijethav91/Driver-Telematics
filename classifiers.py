@@ -13,7 +13,7 @@ class Classifier(object):
 
     def __init__(self, clfName):
         self.clfName = clfName
-        self.outputFileName = self.clfName+"_Output.csv"
+        self.outputFileName = self.clfName + "_Output.csv"
 
     # Function to load the features from feature file
     def loadFeatures(self, _driverId):
@@ -76,36 +76,39 @@ class SimpleLogisticRegression(Classifier):
         self.globalFeatureHash = {}
 
     def loadAllFeatures(self, _driverDataFolder):
-        #print "Loading all features"
+        print "Loading all features"
         for _driver in _driverDataFolder:
             if _driver.startswith('.'):
                 continue
             self.globalFeatureHash[_driver] = super(SimpleLogisticRegression, self).loadFeatures(_driver)
-        #print "Done Loading all features"
+        print "Done Loading all features"
 
-    def samplerOne(self, num):
+    def samplerOne(self, numDrivers):
         secondaryFeatureKeys = np.random.choice(self.globalFeatureHash.keys(), num, replace=False)
-        return reduce(lambda x,y: x+y, map(lambda x:self.globalFeatureHash[x].values(), secondaryFeatureKeys)))
-
-    def samplerTwo(self, num):
-        secondaryFeatureKeys = np.random.choice(self.globalFeatureHash.keys(), num, replace=False)
-        return reduce(lambda x,y: x+y, map(lambda x:self.globalFeatureHash[x].values(), secondaryFeatureKeys)))        
-
-    def runClassifier(self, _driverId, numDrivers):
-        #print "Computing X,Y"
-        X = self.globalFeatureHash[_driverId].values()
-        self.ids = self.globalFeatureHash[_driverId].keys()
         try:
             secondaryFeatureKeys.remove(_driverId)
             numDrivers = numDrivers - 1
         except:
             pass
-        X.extend(self.samplerOne())
-        Y = np.append(np.ones(200), np.zeros(numDrivers*200))
-        #print len(X), len(Y)
-        #print "Done computing X,Y"
+        return reduce(lambda x,y: x+y, map(lambda x:self.globalFeatureHash[x].values(), secondaryFeatureKeys))
 
-        clf = LogisticRegression()
+    def samplerTwo(self, driver, numDrivers, numTrips):
+        _X = self.globalFeatureHash[driver].values()
+        secondaryFeatureKeys = np.random.choice(self.globalFeatureHash.keys(), numDrivers, replace=False)
+        try:
+            secondaryFeatureKeys.remove(driver)
+            numDrivers = numDrivers - 1
+        except:
+            pass
+        randomSampleTrips = map(lambda x: self.globalFeatureHash[x].values()[np.random.choice(200, numTrips)], secondaryFeatureKeys)
+        _X.extend(randomSampleTrips)
+        _Y = np.append(np.ones(200), np.zeros(numDrivers*numTrips))
+        return _X, _Y
+
+    def runClassifier(self, _driverId, numDrivers=1, numTrips=1):
+        X, Y = self.sampler(_driverId, numDrivers, numTrips)
+        self.ids = self.globalFeatureHash[_driverId].keys()
+        clf = LogisticRegression(class_weight='auto')
         model = clf.fit(X, Y)
-        self.labels = model.predict(X[:200])
+        self.label = model.predict(X[:200])
 
