@@ -13,7 +13,7 @@ class Classifier(object):
 
     def __init__(self, clfName):
         self.clfName = clfName
-        self.outputFileName = self.clfName+"_Output.csv"
+        self.outputFileName = self.clfName + "_Output.csv"
 
     # Function to load the features from feature file
     def loadFeatures(self, _driverId):
@@ -83,13 +83,27 @@ class SimpleLogisticRegression(Classifier):
             self.globalFeatureHash[_driver] = super(SimpleLogisticRegression, self).loadFeatures(_driver)
         print "Done Loading all features"
 
-    def samplerOne(self, num):
+    def samplerOne(self, numDrivers):
         secondaryFeatureKeys = np.random.choice(self.globalFeatureHash.keys(), num, replace=False)
+        try:
+            secondaryFeatureKeys.remove(_driverId)
+            numDrivers = numDrivers - 1
+        except:
+            pass
         return reduce(lambda x,y: x+y, map(lambda x:self.globalFeatureHash[x].values(), secondaryFeatureKeys))
 
-    def samplerTwo(self, num):
-        secondaryFeatureKeys = np.random.choice(self.globalFeatureHash.keys(), num, replace=False)
-        return reduce(lambda x,y: x+y, map(lambda x:self.globalFeatureHash[x].values(), secondaryFeatureKeys))
+    def samplerTwo(self, driver, numDrivers, numTrips):
+        _X = self.globalFeatureHash[driver].values()
+        secondaryFeatureKeys = np.random.choice(self.globalFeatureHash.keys(), numDrivers, replace=False)
+        try:
+            secondaryFeatureKeys.remove(driver)
+            numDrivers = numDrivers - 1
+        except:
+            pass
+        randomSampleTrips = map(lambda x: self.globalFeatureHash[x].values()[np.random.choice(200, numTrips)], secondaryFeatureKeys)
+        _X.extend(randomSampleTrips)
+        _Y = np.append(np.ones(200), np.zeros(numDrivers*numTrips))
+        return _X, _Y
 
     def samplerThree(self, _driverId, numTrips):
         #print "Computing X,Y"
