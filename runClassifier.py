@@ -23,7 +23,7 @@ if __name__ == "__main__":
         if driver.startswith('.'):
             continue
         print "Processing driver ", driver
-        slrClf.runClassifier(driver, 1, 1600)
+        slrClf.runClassifier(driver, 1, 1, 1600)
         writeCsv(slrClf, outputWriter)
     outFile.close()
     exit()
@@ -41,7 +41,7 @@ if __name__ == "__main__":
         if driver.startswith('.'):
             continue
         print "Processing driver ", driver
-        slrClf.runClassifier(driver, 1, 1000)
+        slrClf.runClassifier(driver, 2, 400, 1)
         writeCsv(slrClf, outputWriter)
     outFile.close()
     exit()

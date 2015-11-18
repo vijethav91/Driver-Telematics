@@ -87,43 +87,44 @@ class SimpleLogisticRegression(Classifier):
             self.globalFeatureHash[_driver] = super(SimpleLogisticRegression, self).loadFeatures(_driver)
         print "Done Loading all features"
 
-    def samplerOne(self, numDrivers):
-        secondaryFeatureKeys = np.random.choice(self.globalFeatureHash.keys(), num, replace=False)
-        try:
-            secondaryFeatureKeys.remove(_driverId)
-            numDrivers = numDrivers - 1
-        except:
-            pass
-        return reduce(lambda x,y: x+y, map(lambda x:self.globalFeatureHash[x].values(), secondaryFeatureKeys))
-
-    def samplerTwo(self, driver, numDrivers, numTrips):
+    def randomSampler(self, driver, sampleType=1, numDrivers=1, numTrips=1):
+        # create the positive trips
         _X = self.globalFeatureHash[driver].values()
-        secondaryFeatureKeys = np.random.choice(self.globalFeatureHash.keys(), numDrivers, replace=False)
-        try:
-            secondaryFeatureKeys.remove(driver)
-            numDrivers = numDrivers - 1
-        except:
-            pass
-        randomSampleTrips = map(lambda x: self.globalFeatureHash[x].values()[np.random.choice(200, numTrips)], secondaryFeatureKeys)
+
+        # create the negative trips based on sampleType
+        if sampleType == 1:
+            # based on number of random trips
+            totalTrips = len(self.globalFeatureHash)*200
+            randomInts = np.random.random_integers(0, totalTrips-1, numTrips)
+            secondaryDriverKeys = map(lambda x:x/200, randomInts)
+            secondaryDriverIDs = map(lambda x:self.globalFeatureHash.keys()[x], secondaryDriverKeys)
+            secondaryTripKeys = map(lambda x:x%200, randomInts)
+            randomSampleTrips = map(lambda i:self.globalFeatureHash[secondaryDriverIDs[i]].values()[secondaryTripKeys[i]] , range(numTrips))
+        else:
+            # based on number of random drivers
+            secondaryFeatureKeys = np.random.choice(self.globalFeatureHash.keys(), numDrivers, replace=False)
+            try:
+                secondaryFeatureKeys.remove(driver)
+                numDrivers = numDrivers - 1
+            except:
+                pass
+            if numTrips == 1:
+                randomSampleTrips = map(lambda x: self.globalFeatureHash[x].values()[np.random.choice(200, numTrips)], secondaryFeatureKeys)
+            else:
+                secondaryTripKeys = np.random.choice(200, numTrips)
+                randomTrips = map(lambda x: map(lambda i: self.globalFeatureHash[x].values()[i], secondaryTripKeys), secondaryFeatureKeys)
+                randomSampleTrips = reduce(lambda x,y: x+y, randomTrips)
+
+        # add the negative trips to X
         _X.extend(randomSampleTrips)
+
+        # construct the labels for the two classess accordingly
         _Y = np.append(np.ones(200), np.zeros(numDrivers*numTrips))
+
         return _X, _Y
 
-    def samplerThree(self, _driverId, numTrips):
-        #print "Computing X,Y"
-        X = self.globalFeatureHash[_driverId].values()
-        secondaryFeatures = []
-        totalTrips = len(self.globalFeatureHash)*200
-        randomInt = np.random.random_integers(0, totalTrips-1, numTrips)
-        secondaryDriverKeys = map(lambda x:x/200, randomInt)
-        secondaryDriverIDs = map(lambda x:self.globalFeatureHash.keys()[x], secondaryDriverKeys)
-        secondaryTripKeys = map(lambda x:x%200, randomInt)
-        X.extend(map(lambda i:self.globalFeatureHash[secondaryDriverIDs[i]].values()[secondaryTripKeys[i]] , range(numTrips)))
-        Y = np.append(np.ones(200), np.zeros(numTrips))
-        return X, Y
-
-    def runClassifier(self, _driverId, numDrivers=1, numTrips=1):
-        X, Y = self.samplerThree(_driverId, numTrips)
+    def runClassifier(self, _driverId, sampleType=1, numDrivers=1, numTrips=1):
+        X, Y = self.randomSampler(_driverId, sampleType, numDrivers, numTrips)
         if self.runpca:
             X = self.getPCA(X,30)
         self.ids = self.globalFeatureHash[_driverId].keys()
