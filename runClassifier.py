@@ -30,7 +30,8 @@ if __name__ == "__main__":
 
     # Running Logistic Regression without PCA
     slrClf = classifiers.SimpleLogisticRegression()
-
+    slrClf.loadAllFeatures(driverData)
+    
     outFile = open(slrClf.outputFileName, 'wb')
     outputWriter = csv.writer(outFile, delimiter=',',quotechar='"', quoting=csv.QUOTE_MINIMAL)
     outputWriter.writerow(['driver_trip', 'prob'])
