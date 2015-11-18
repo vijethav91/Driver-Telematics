@@ -107,7 +107,9 @@ class SimpleLogisticRegression(Classifier):
             if numTrips == 1:
                 randomSampleTrips = map(lambda x: self.globalFeatureHash[x].values()[np.random.choice(200, numTrips)], secondaryFeatureKeys)
             else:
-                randomSampleTrips = reduce(lambda x,y: x+y, map(lambda x: np.random.choice(self.globalFeatureHash[x].values(), numTrips), secondaryFeatureKeys))
+                secondaryTripKeys = np.random.choice(200, numTrips)
+                randomTrips = map(lambda x: map(lambda i: self.globalFeatureHash[x].values()[i], secondaryTripKeys), secondaryFeatureKeys)
+                randomSampleTrips = reduce(lambda x,y: x+y, randomTrips)
 
         # add the negative trips to X
         _X.extend(randomSampleTrips)
