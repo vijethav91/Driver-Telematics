@@ -33,12 +33,12 @@ class Classifier(object):
 
         return temp
 
-    def getPCA(self, X):
+    def getPCA(self, X, numComponents):
         # normalize the features
         X_std = StandardScaler().fit_transform(X)
 
         # PCA
-        pca = PCA(n_components=7)
+        pca = PCA(numComponents)
         pca.fit(X_std)
         return pca.transform(X_std)
 
@@ -61,7 +61,7 @@ class OneClassSVM(Classifier):
         X = self.featuresHash.values()
         self.ids = self.featuresHash.keys()
         if self.runpca:
-            X = self.getPCA(X)
+            X = self.getPCA(X,7)
 
         clf = OCSVM(nu=self.nu, gamma=self.gamma)
         clf.fit(X)
@@ -71,8 +71,12 @@ class OneClassSVM(Classifier):
         self.label = map(int, self.label)
 
 class SimpleLogisticRegression(Classifier):
-    def __init__(self):
-        super(SimpleLogisticRegression, self).__init__('SimpleLogisticRegression')
+    def __init__(self, runpca=False):
+        self.runpca = runpca
+        clfName = 'SimpleLogisticRegression'
+        if self.runpca:
+            clfName = clfName + "_PCA"
+        super(SimpleLogisticRegression, self).__init__(clfName)
         self.globalFeatureHash = {}
 
     def loadAllFeatures(self, _driverDataFolder):
@@ -119,7 +123,9 @@ class SimpleLogisticRegression(Classifier):
         return X, Y
 
     def runClassifier(self, _driverId, numDrivers=1, numTrips=1):
-        X, Y = self.sampler(_driverId, numDrivers, numTrips)
+        X, Y = self.samplerThree(_driverId, numTrips)
+        if self.runpca:
+            X = self.getPCA(X,30)
         self.ids = self.globalFeatureHash[_driverId].keys()
         clf = LogisticRegression(class_weight='auto')
         model = clf.fit(X, Y)
