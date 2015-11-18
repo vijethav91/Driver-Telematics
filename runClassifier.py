@@ -10,6 +10,24 @@ def writeCsv(clf, outputWriter):
 if __name__ == "__main__":
     driverData = os.listdir(classifiers.Classifier.baseFeatureFolder)
 
+    # Running Logistic Regression with PCA
+    slrClf = classifiers.SimpleLogisticRegression(runpca=True)
+    slrClf.loadAllFeatures(driverData)
+
+    outFile = open(slrClf.outputFileName, 'wb')
+    outputWriter = csv.writer(outFile, delimiter=',',quotechar='"', quoting=csv.QUOTE_MINIMAL)
+    outputWriter.writerow(['driver_trip', 'prob'])
+
+    for driver in driverData:
+        # sanity check to skip '.DS_Store' file in Mac
+        if driver.startswith('.'):
+            continue
+        print "Processing driver ", driver
+        slrClf.runClassifier(driver, 1, 1, 1600)
+        writeCsv(slrClf, outputWriter)
+    outFile.close()
+    exit()
+
     # Running Logistic Regression
     slrClf = classifiers.SimpleLogisticRegression()
     slrClf.loadAllFeatures(driverData)
