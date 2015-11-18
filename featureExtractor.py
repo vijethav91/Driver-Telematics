@@ -14,7 +14,7 @@ class Features:
     # Constructor to initialize the features
     def __init__(self, _id):
         self.driverTripId = _id
-        self.featuresList = np.array([])
+        self.featureList = []
         # Distance Features
         self.distanceList = np.array([])
         self.totalDistance = 0
@@ -38,6 +38,9 @@ class Features:
         self.meanNegAcceleration = 0
         self.stdDevNegAcceleration = 0
         self.negAccelerationPercentiles = []
+        self.meanJerk = 0
+        self.stdDevJerk = 0
+        self.jerkPercentiles = []
 
     # Template function to compute all features
     def computeFeatures(self):
@@ -48,8 +51,8 @@ class Features:
 
     # Function to build the featureList for saving to csv
     def composeFeatures(self):
-        self.featureList = [self.driverTripId, self.totalDistance, self.totalTripTime, self.tripDisplacement, 
-                            self.totalStandingTime, self.stopRatio, self.meanSpeed,  self.meanSpeedNotStopped, 
+        self.featureList = [self.driverTripId, self.totalDistance, self.totalTripTime, self.tripDisplacement,
+                            self.totalStandingTime, self.stopRatio, self.meanSpeed,  self.meanSpeedNotStopped,
                             self.stdDevSpeed, self.maxSpeed
                             ]
         self.featureList.extend(self.speedPercentiles)
@@ -59,6 +62,8 @@ class Features:
         self.featureList.extend(self.posAccelerationPercentiles)
         self.featureList.extend([self.meanNegAcceleration, self.stdDevNegAcceleration])
         self.featureList.extend(self.negAccelerationPercentiles)
+        self.featureList.extend([self.meanJerk, self.stdDevJerk])
+        self.featureList.extend(self.jerkPercentiles)
 
     # Function to compute the distance features
     def computeDistanceFeatures(self):
@@ -129,6 +134,12 @@ class Features:
         self.meanNegAcceleration = np.mean(negativeAcceleration)
         self.stdDevNegAcceleration = np.std(negativeAcceleration)
         self.negAccelerationPercentiles = self.computePercentiles(negativeAcceleration)
+
+        # Derivative of acceleration (jerk)
+        jerk = np.diff(instantAcceleration)
+        self.meanJerk = np.mean(jerk)
+        self.stdDevJerk = np.std(jerk)
+        self.jerkPercentiles = self.computePercentiles(jerk)
 
     # Function to compute percentiles
     def computePercentiles(self, values):
@@ -213,29 +224,35 @@ if __name__ == "__main__":
         featureFileName = Features.baseFeatureFolder + driver + '.csv'
         outFile = open(featureFileName, 'wb')
         featureWriter = csv.writer(outFile, delimiter=',',quotechar='"', quoting=csv.QUOTE_MINIMAL)
-        featureWriter.writerow(['driverTripId', 'totalDistance', 'totalTripTime', 'tripDisplacement',
+        csvHeader = ['driverTripId', 'totalDistance', 'totalTripTime', 'tripDisplacement',
                                  'totalStandingTime', 'stopRatio', 'meanSpeed', 'meanSpeedNotStopped',
-                                 'stdDevSpeed', 'maxSpeed', 'speedPercentiles5th', 'speedPercentiles10th', 
-                                 'speedPercentiles25th', 'speedPercentiles50th', 'speedPercentiles75th', 
-                                 'speedPercentiles85th', 'speedPercentiles90th', 'speedPercentiles95th', 
-                                 'speedPercentiles97th', 'speedPercentiles98th', 'speedPercentiles99th', 
-                                 'speedPercentiles100th', 'meanAcceleration', 'stdDevAcceleration', 
-                                 'accelerationPercentiles5th', 'accelerationPercentiles10th', 'accelerationPercentiles25th', 
+                                 'stdDevSpeed', 'maxSpeed', 'speedPercentiles5th', 'speedPercentiles10th',
+                                 'speedPercentiles25th', 'speedPercentiles50th', 'speedPercentiles75th',
+                                 'speedPercentiles85th', 'speedPercentiles90th', 'speedPercentiles95th',
+                                 'speedPercentiles97th', 'speedPercentiles98th', 'speedPercentiles99th',
+                                 'speedPercentiles100th', 'meanAcceleration', 'stdDevAcceleration',
+                                 'accelerationPercentiles5th', 'accelerationPercentiles10th', 'accelerationPercentiles25th',
                                  'accelerationPercentiles50th', 'accelerationPercentiles75th',
                                  'accelerationPercentiles85th', 'accelerationPercentiles90th', 'accelerationPercentiles95th',
                                  'accelerationPercentiles97th', 'accelerationPercentiles98th', 'accelerationPercentiles99th',
-                                 'accelerationPercentiles100th', 'meanPosAcceleration', 'stdDevPosAcceleration', 
-                                 'posAccelerationPercentiles5th', 'posAccelerationPercentiles10th', 
+                                 'accelerationPercentiles100th', 'meanPosAcceleration', 'stdDevPosAcceleration',
+                                 'posAccelerationPercentiles5th', 'posAccelerationPercentiles10th',
                                  'posAccelerationPercentiles25th', 'posAccelerationPercentiles50th', 'posAccelerationPercentiles75th',
-                                 'posAccelerationPercentiles85th', 'posAccelerationPercentiles90th', 'posAccelerationPercentiles95th', 
+                                 'posAccelerationPercentiles85th', 'posAccelerationPercentiles90th', 'posAccelerationPercentiles95th',
                                  'posAccelerationPercentiles97th','posAccelerationPercentiles98th', 'posAccelerationPercentiles99th',
-                                 'posAccelerationPercentiles100th', 'meanNegAcceleration', 'stdDevNegAcceleration', 
-                                 'negAccelerationPercentiles5th', 'negAccelerationPercentiles10th', 
+                                 'posAccelerationPercentiles100th', 'meanNegAcceleration', 'stdDevNegAcceleration',
+                                 'negAccelerationPercentiles5th', 'negAccelerationPercentiles10th',
                                  'negAccelerationPercentiles25th', 'negAccelerationPercentiles50th', 'negAccelerationPercentiles75th',
                                  'negAccelerationPercentiles85th', 'negAccelerationPercentiles90th', 'negAccelerationPercentiles95th',
                                  'negAccelerationPercentiles97th', 'negAccelerationPercentiles98th', 'negAccelerationPercentiles99th',
-                                 'negAccelerationPercentiles100th',
-                               ])
+                                 'negAccelerationPercentiles100th', 'meanJerk', 'stdDevJerk',
+                                 'jerkPercentiles5th', 'jerkPercentiles10th',
+                                 'jerkPercentiles25th', 'jerkPercentiles50th', 'jerkPercentiles75th',
+                                 'jerkPercentiles85th', 'jerkPercentiles90th', 'jerkPercentiles95th',
+                                 'jerkPercentiles97th', 'jerkPercentiles98th', 'jerkPercentiles99th',
+                                 'jerkPercentiles100th',
+                               ]
+        featureWriter.writerow(csvHeader)
 
         for trip in tripData:
             # sanity check to skip '.DS_Store' file in Mac
@@ -255,3 +272,4 @@ if __name__ == "__main__":
 
         # Close the feature file after processing
         outFile.close()
+    exit()
