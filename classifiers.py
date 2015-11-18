@@ -57,11 +57,11 @@ class OneClassSVM(Classifier):
     def loadFeatures(self, _driverId):
         self.featuresHash = super(OneClassSVM, self).loadFeatures(_driverId)
 
-    def runClassifier(self):
+    def runClassifier(self, numComponents=0):
         X = self.featuresHash.values()
         self.ids = self.featuresHash.keys()
         if self.runpca:
-            X = self.getPCA(X,7)
+            X = self.getPCA(X,numComponents)
 
         clf = OCSVM(nu=self.nu, gamma=self.gamma)
         clf.fit(X)
@@ -123,10 +123,10 @@ class SimpleLogisticRegression(Classifier):
 
         return _X, _Y
 
-    def runClassifier(self, _driverId, sampleType=1, numDrivers=1, numTrips=1):
+    def runClassifier(self, _driverId, sampleType=1, numDrivers=1, numTrips=1, numComponents=0):
         X, Y = self.randomSampler(_driverId, sampleType, numDrivers, numTrips)
         if self.runpca:
-            X = self.getPCA(X,30)
+            X = self.getPCA(X,numComponents)
         self.ids = self.globalFeatureHash[_driverId].keys()
         clf = LogisticRegression(class_weight='auto')
         model = clf.fit(X, Y)

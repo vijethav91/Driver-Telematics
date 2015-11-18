@@ -23,14 +23,13 @@ if __name__ == "__main__":
         if driver.startswith('.'):
             continue
         print "Processing driver ", driver
-        slrClf.runClassifier(driver, 1, 1, 1600)
+        slrClf.runClassifier(driver, 1, 1, 1600, 50)
         writeCsv(slrClf, outputWriter)
     outFile.close()
     exit()
 
-    # Running Logistic Regression
+    # Running Logistic Regression without PCA
     slrClf = classifiers.SimpleLogisticRegression()
-    slrClf.loadAllFeatures(driverData)
 
     outFile = open(slrClf.outputFileName, 'wb')
     outputWriter = csv.writer(outFile, delimiter=',',quotechar='"', quoting=csv.QUOTE_MINIMAL)
@@ -41,7 +40,7 @@ if __name__ == "__main__":
         if driver.startswith('.'):
             continue
         print "Processing driver ", driver
-        slrClf.runClassifier(driver, 2, 400, 1)
+        slrClf.runClassifier(driver, 1, 1, 1600)
         writeCsv(slrClf, outputWriter)
     outFile.close()
     exit()
@@ -74,6 +73,6 @@ if __name__ == "__main__":
             continue
         print "Processing driver ", driver
         svmClf.loadFeatures(driver)
-        svmClf.runClassifier()
+        svmClf.runClassifier(7)
         writeCsv(svmClf, outputWriter)
     outFile.close()
