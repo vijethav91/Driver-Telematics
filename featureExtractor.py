@@ -41,6 +41,9 @@ class Features:
         self.meanJerk = 0
         self.stdDevJerk = 0
         self.jerkPercentiles = []
+        self.meanAngle = 0
+        self.stdDevAngle = 0
+        self.anglePercentiles = []
 
     # Template function to compute all features
     def computeFeatures(self):
@@ -64,6 +67,8 @@ class Features:
         self.featureList.extend(self.negAccelerationPercentiles)
         self.featureList.extend([self.meanJerk, self.stdDevJerk])
         self.featureList.extend(self.jerkPercentiles)
+        self.featureList.extend([self.meanAngle, self.stdDevAngle])
+        self.featureList.extend(self.anglePercentiles)
 
     # Function to compute the distance features
     def computeDistanceFeatures(self):
@@ -80,12 +85,12 @@ class Features:
         self.totalTripTime = len(X) - 1
 
         # computing the distance covered every second
-        deltaX = np.diff(X)
-        deltaY = np.diff(Y)
+        self.deltaX = np.diff(X)
+        self.deltaY = np.diff(Y)
 
         sqFunc = np.vectorize(lambda x:x*x)
-        sqX = sqFunc(deltaX)
-        sqY = sqFunc(deltaY)
+        sqX = sqFunc(self.deltaX)
+        sqY = sqFunc(self.deltaY)
 
         self.distanceList = np.sqrt(sqX+sqY)
         self.totalDistance = np.sum(self.distanceList)
@@ -141,6 +146,13 @@ class Features:
         self.stdDevJerk = np.std(jerk)
         self.jerkPercentiles = self.computePercentiles(jerk)
 
+    # Function to compute turning angle features
+    def computeAngleFeatures(self):
+        turningAngle=(self.deltaY[1:]*self.deltaY[:-1]+self.deltaX[1:]*self.deltaX[:-1])/(self.distanceList[:-1]*self.distanceList[1:])
+        self.meanAngle = np.mean(turningAngle)
+        self.stdDevAngle = np.mean(turningAngle)
+        self.anglePercentiles = self.computePercentiles(turningAngle)
+
     # Function to compute percentiles
     def computePercentiles(self, values):
         percentiles = [ np.percentile(values, 5),
@@ -182,15 +194,7 @@ class Features:
     def readCsv(self, filename):
         X = []
         Y = []
-        # open the file in read mode
-        infile = open(filename, "r")
-
-        # ignore the first line with label and the last empty line
-        temp = infile.read().split('\n')[1:-1]
-        for line in temp:
-            _x, _y = line.strip().split(',')
-            X.append(float(_x))
-            Y.append(float(_y))
+        X, Y = np.loadtxt(filename, delimiter=',', skiprows=1, unpack=True)
 
         # return our list of lists that captures all co-ordinate points for one trip
         return X, Y
@@ -250,7 +254,12 @@ if __name__ == "__main__":
                                  'jerkPercentiles25th', 'jerkPercentiles50th', 'jerkPercentiles75th',
                                  'jerkPercentiles85th', 'jerkPercentiles90th', 'jerkPercentiles95th',
                                  'jerkPercentiles97th', 'jerkPercentiles98th', 'jerkPercentiles99th',
-                                 'jerkPercentiles100th',
+                                 'jerkPercentiles100th', 'meanAngle', 'stdDevAngle',
+                                 'anglePercentiles5th', 'anglePercentiles10th',
+                                 'anglePercentiles25th', 'anglePercentiles50th', 'anglePercentiles75th',
+                                 'anglePercentiles85th', 'anglePercentiles90th', 'anglePercentiles95th',
+                                 'anglePercentiles97th', 'anglePercentiles98th', 'anglePercentiles99th',
+                                 'anglePercentiles100th',
                                ]
         featureWriter.writerow(csvHeader)
 
