@@ -1,4 +1,5 @@
 from __future__ import division
+from multiprocessing import Pool, cpu_count
 
 import csv
 import matplotlib.pyplot as plt
@@ -78,8 +79,6 @@ class Features:
 
         # read the file
         X, Y = self.readCsv(tripFileName)
-        X = np.array(X)
-        Y = np.array(Y)
 
         # computing total trip duration in seconds
         self.totalTripTime = len(X) - 1
@@ -192,8 +191,6 @@ class Features:
     # Function to read data from csv and return a list of co-ordinate points.
     # Each point is represented as a list of two values [x, y].
     def readCsv(self, filename):
-        X = []
-        Y = []
         X, Y = np.loadtxt(filename, delimiter=',', skiprows=1, unpack=True)
 
         # return our list of lists that captures all co-ordinate points for one trip
@@ -209,58 +206,50 @@ def plotTrip(data):
     plt.plot(X, Y, 'ro')
     plt.show()
 
-if __name__ == "__main__":
-    # Read the drivers folder to get the driver folder names
-    driverData = os.listdir(Features.baseDriversFolder)
-    numDrivers = len(driverData)
-
-    for driver in driverData:
-        # sanity check to skip '.DS_Store' file in Mac
-        if driver.startswith('.'):
-            continue
-
+def extractFeatures(driverList):
+    for driver in driverList:
         print "Processing for driver: ", driver
-
-        # Read the individual driver folder to process all the trips
         tripData = os.listdir(Features.baseDriversFolder + driver)
 
+        if driver.startswith('.'):
+            return
         # Open a feature file for a driver to write all the trip features as a csv
         featureFileName = Features.baseFeatureFolder + driver + '.csv'
         outFile = open(featureFileName, 'wb')
         featureWriter = csv.writer(outFile, delimiter=',',quotechar='"', quoting=csv.QUOTE_MINIMAL)
         csvHeader = ['driverTripId', 'totalDistance', 'totalTripTime', 'tripDisplacement',
-                                 'totalStandingTime', 'stopRatio', 'meanSpeed', 'meanSpeedNotStopped',
-                                 'stdDevSpeed', 'maxSpeed', 'speedPercentiles5th', 'speedPercentiles10th',
-                                 'speedPercentiles25th', 'speedPercentiles50th', 'speedPercentiles75th',
-                                 'speedPercentiles85th', 'speedPercentiles90th', 'speedPercentiles95th',
-                                 'speedPercentiles97th', 'speedPercentiles98th', 'speedPercentiles99th',
-                                 'speedPercentiles100th', 'meanAcceleration', 'stdDevAcceleration',
-                                 'accelerationPercentiles5th', 'accelerationPercentiles10th', 'accelerationPercentiles25th',
-                                 'accelerationPercentiles50th', 'accelerationPercentiles75th',
-                                 'accelerationPercentiles85th', 'accelerationPercentiles90th', 'accelerationPercentiles95th',
-                                 'accelerationPercentiles97th', 'accelerationPercentiles98th', 'accelerationPercentiles99th',
-                                 'accelerationPercentiles100th', 'meanPosAcceleration', 'stdDevPosAcceleration',
-                                 'posAccelerationPercentiles5th', 'posAccelerationPercentiles10th',
-                                 'posAccelerationPercentiles25th', 'posAccelerationPercentiles50th', 'posAccelerationPercentiles75th',
-                                 'posAccelerationPercentiles85th', 'posAccelerationPercentiles90th', 'posAccelerationPercentiles95th',
-                                 'posAccelerationPercentiles97th','posAccelerationPercentiles98th', 'posAccelerationPercentiles99th',
-                                 'posAccelerationPercentiles100th', 'meanNegAcceleration', 'stdDevNegAcceleration',
-                                 'negAccelerationPercentiles5th', 'negAccelerationPercentiles10th',
-                                 'negAccelerationPercentiles25th', 'negAccelerationPercentiles50th', 'negAccelerationPercentiles75th',
-                                 'negAccelerationPercentiles85th', 'negAccelerationPercentiles90th', 'negAccelerationPercentiles95th',
-                                 'negAccelerationPercentiles97th', 'negAccelerationPercentiles98th', 'negAccelerationPercentiles99th',
-                                 'negAccelerationPercentiles100th', 'meanJerk', 'stdDevJerk',
-                                 'jerkPercentiles5th', 'jerkPercentiles10th',
-                                 'jerkPercentiles25th', 'jerkPercentiles50th', 'jerkPercentiles75th',
-                                 'jerkPercentiles85th', 'jerkPercentiles90th', 'jerkPercentiles95th',
-                                 'jerkPercentiles97th', 'jerkPercentiles98th', 'jerkPercentiles99th',
-                                 'jerkPercentiles100th', 'meanAngle', 'stdDevAngle',
-                                 'anglePercentiles5th', 'anglePercentiles10th',
-                                 'anglePercentiles25th', 'anglePercentiles50th', 'anglePercentiles75th',
-                                 'anglePercentiles85th', 'anglePercentiles90th', 'anglePercentiles95th',
-                                 'anglePercentiles97th', 'anglePercentiles98th', 'anglePercentiles99th',
-                                 'anglePercentiles100th',
-                               ]
+                     'totalStandingTime', 'stopRatio', 'meanSpeed', 'meanSpeedNotStopped',
+                     'stdDevSpeed', 'maxSpeed', 'speedPercentiles5th', 'speedPercentiles10th',
+                     'speedPercentiles25th', 'speedPercentiles50th', 'speedPercentiles75th',
+                     'speedPercentiles85th', 'speedPercentiles90th', 'speedPercentiles95th',
+                     'speedPercentiles97th', 'speedPercentiles98th', 'speedPercentiles99th',
+                     'speedPercentiles100th', 'meanAcceleration', 'stdDevAcceleration',
+                     'accelerationPercentiles5th', 'accelerationPercentiles10th', 'accelerationPercentiles25th',
+                     'accelerationPercentiles50th', 'accelerationPercentiles75th',
+                     'accelerationPercentiles85th', 'accelerationPercentiles90th', 'accelerationPercentiles95th',
+                     'accelerationPercentiles97th', 'accelerationPercentiles98th', 'accelerationPercentiles99th',
+                     'accelerationPercentiles100th', 'meanPosAcceleration', 'stdDevPosAcceleration',
+                     'posAccelerationPercentiles5th', 'posAccelerationPercentiles10th',
+                     'posAccelerationPercentiles25th', 'posAccelerationPercentiles50th', 'posAccelerationPercentiles75th',
+                     'posAccelerationPercentiles85th', 'posAccelerationPercentiles90th', 'posAccelerationPercentiles95th',
+                     'posAccelerationPercentiles97th','posAccelerationPercentiles98th', 'posAccelerationPercentiles99th',
+                     'posAccelerationPercentiles100th', 'meanNegAcceleration', 'stdDevNegAcceleration',
+                     'negAccelerationPercentiles5th', 'negAccelerationPercentiles10th',
+                     'negAccelerationPercentiles25th', 'negAccelerationPercentiles50th', 'negAccelerationPercentiles75th',
+                     'negAccelerationPercentiles85th', 'negAccelerationPercentiles90th', 'negAccelerationPercentiles95th',
+                     'negAccelerationPercentiles97th', 'negAccelerationPercentiles98th', 'negAccelerationPercentiles99th',
+                     'negAccelerationPercentiles100th', 'meanJerk', 'stdDevJerk',
+                     'jerkPercentiles5th', 'jerkPercentiles10th',
+                     'jerkPercentiles25th', 'jerkPercentiles50th', 'jerkPercentiles75th',
+                     'jerkPercentiles85th', 'jerkPercentiles90th', 'jerkPercentiles95th',
+                     'jerkPercentiles97th', 'jerkPercentiles98th', 'jerkPercentiles99th',
+                     'jerkPercentiles100th', 'meanAngle', 'stdDevAngle',
+                     'anglePercentiles5th', 'anglePercentiles10th',
+                     'anglePercentiles25th', 'anglePercentiles50th', 'anglePercentiles75th',
+                     'anglePercentiles85th', 'anglePercentiles90th', 'anglePercentiles95th',
+                     'anglePercentiles97th', 'anglePercentiles98th', 'anglePercentiles99th',
+                     'anglePercentiles100th',
+                    ]
         featureWriter.writerow(csvHeader)
 
         for trip in tripData:
@@ -281,4 +270,25 @@ if __name__ == "__main__":
 
         # Close the feature file after processing
         outFile.close()
-    exit()
+
+def getDriverBatches(filesList, psize):
+    batch = []
+    splitsize = 1 / psize * len(filesList)
+
+    batch = map(lambda i: filesList[int(round(i*splitsize)): int(round((i+1)*splitsize))], range(psize))
+
+    return batch
+
+if __name__ == "__main__":
+    # Read the drivers folder to get the driver folder names
+    driverData = os.listdir(Features.baseDriversFolder)
+
+    # Obtain the number of cpu's and set it to 1 less
+    numprocessors = cpu_count() - 1
+    workers = Pool(numprocessors)
+
+    # Create the batches of files for processing
+    driverBatches = getDriverBatches(driverData, numprocessors)
+    
+    result = workers.map_async(extractFeatures, driverBatches)
+    workersResult = result.get()    
