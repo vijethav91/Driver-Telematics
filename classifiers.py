@@ -71,13 +71,16 @@ class OneClassSVM(Classifier):
         self.label = map(int, self.label)
 
 class SimpleLogisticRegression(Classifier):
-    def __init__(self, runpca=False):
+    def __init__(self, runpca, sampleType=1, numDrivers=1, numTrips=1):
         self.runpca = runpca
         clfName = 'SimpleLogisticRegression'
         if self.runpca:
             clfName = clfName + "_PCA"
         super(SimpleLogisticRegression, self).__init__(clfName)
         self.globalFeatureHash = {}
+        self.sampleType = sampleType
+        self.numDrivers = numDrivers
+        self.numTrips = numTrips
 
     def loadAllFeatures(self, _driverDataFolder):
         print "Loading all features"
@@ -123,10 +126,10 @@ class SimpleLogisticRegression(Classifier):
 
         return _X, _Y
 
-    def runClassifier(self, _driverId, sampleType=1, numDrivers=1, numTrips=1, numComponents=0):
-        X, Y = self.randomSampler(_driverId, sampleType, numDrivers, numTrips)
+    def runClassifier(self, _driverId, numComponents=0):
+        X, Y = self.randomSampler(_driverId, self.sampleType, self.numDrivers, self.numTrips)
         if self.runpca:
-            X = self.getPCA(X,numComponents)
+            X = self.getPCA(X, numComponents)
         self.ids = self.globalFeatureHash[_driverId].keys()
         clf = LogisticRegression(class_weight='auto')
         model = clf.fit(X, Y)
