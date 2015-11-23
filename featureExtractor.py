@@ -285,10 +285,11 @@ if __name__ == "__main__":
 
     # Obtain the number of cpu's and set it to 1 less
     numprocessors = cpu_count() - 1
+    print numprocessors
     workers = Pool(numprocessors)
 
     # Create the batches of files for processing
     driverBatches = getDriverBatches(driverData, numprocessors)
-    
+
     result = workers.map_async(extractFeatures, driverBatches)
-    workersResult = result.get()    
+    workersResult = result.get()
