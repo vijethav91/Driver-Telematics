@@ -7,6 +7,7 @@ from sklearn.decomposition import PCA
 from sklearn.linear_model import LogisticRegression
 from sklearn.preprocessing import StandardScaler
 from sklearn.svm import OneClassSVM as OCSVM
+from sklearn.ensemble import RandomForestClassifier
 
 class Classifier(object):
     baseFeatureFolder = "features/"
@@ -132,5 +133,71 @@ class SimpleLogisticRegression(Classifier):
             X = self.getPCA(X, numComponents)
         self.ids = self.globalFeatureHash[_driverId].keys()
         clf = LogisticRegression(class_weight='auto')
+        model = clf.fit(X, Y)
+        self.label = model.predict(X[:200])
+
+class RandomForest(Classifier):
+    def __init__(self, runpca, sampleType=1, numDrivers=1, numTrips=1):
+        self.runpca = runpca
+        clfName = 'RandomForest'
+        if self.runpca:
+            clfName = clfName + "_PCA"
+        super(RandomForest, self).__init__(clfName)
+        self.globalFeatureHash = {}
+        self.sampleType = sampleType
+        self.numDrivers = numDrivers
+        self.numTrips = numTrips
+
+    def loadAllFeatures(self, _driverDataFolder):
+        print "Loading all features"
+        for _driver in _driverDataFolder:
+            if _driver.startswith('.'):
+                continue
+            self.globalFeatureHash[_driver] = super(RandomForest, self).loadFeatures(_driver)
+        print "Done Loading all features"
+
+    def randomSampler(self, driver, sampleType=1, numDrivers=1, numTrips=1):
+        # create the positive trips
+        _X = self.globalFeatureHash[driver].values()
+
+        # create the negative trips based on sampleType
+        if sampleType == 1:
+            # based on number of random trips
+            totalTrips = len(self.globalFeatureHash)*200
+            randomInts = np.random.random_integers(0, totalTrips-1, numTrips)
+            secondaryDriverKeys = map(lambda x:x/200, randomInts)
+            secondaryDriverIDs = map(lambda x:self.globalFeatureHash.keys()[x], secondaryDriverKeys)
+            secondaryTripKeys = map(lambda x:x%200, randomInts)
+            randomSampleTrips = map(lambda i:self.globalFeatureHash[secondaryDriverIDs[i]].values()[secondaryTripKeys[i]] , range(numTrips))
+        else:
+            # based on number of random drivers
+            secondaryFeatureKeys = np.random.choice(self.globalFeatureHash.keys(), numDrivers, replace=False)
+            try:
+                secondaryFeatureKeys.remove(driver)
+                numDrivers = numDrivers - 1
+            except:
+                pass
+            if numTrips == 1:
+                randomSampleTrips = map(lambda x: self.globalFeatureHash[x].values()[np.random.choice(200, numTrips)], secondaryFeatureKeys)
+            else:
+                secondaryTripKeys = np.random.choice(200, numTrips)
+                randomTrips = map(lambda x: map(lambda i: self.globalFeatureHash[x].values()[i], secondaryTripKeys), secondaryFeatureKeys)
+                randomSampleTrips = reduce(lambda x,y: x+y, randomTrips)
+
+        # add the negative trips to X
+        _X.extend(randomSampleTrips)
+
+        # construct the labels for the two classess accordingly
+        _Y = np.append(np.ones(200), np.zeros(numDrivers*numTrips))
+
+        return _X, _Y
+
+    def runClassifier(self, _driverId, numComponents=0):
+        X, Y = self.randomSampler(_driverId, self.sampleType, self.numDrivers, self.numTrips)
+        if self.runpca:
+            X = self.getPCA(X, numComponents)
+        self.ids = self.globalFeatureHash[_driverId].keys()
+        clf = RandomForestClassifier(n_estimators=100,max_depth=None,min_samples_split=1,random_state=0)
+
         model = clf.fit(X, Y)
         self.label = model.predict(X[:200])

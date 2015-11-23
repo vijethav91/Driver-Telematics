@@ -9,15 +9,17 @@ def writeCsv(clf, outputWriter):
         outputWriter.writerow([clf.ids[i], clf.label[i]])
 
 def classifierFactory(name, runPCA, sampleType, numDrivers, numTrips):
-    if name == 'OneClassSVM': 
+    if name == 'OneClassSVM':
         return classifiers.OneClassSVM(0.261, 0.05, runPCA)
-    if name == 'LogisticRegression': 
+    if name == 'LogisticRegression':
         return classifiers.SimpleLogisticRegression(runPCA, sampleType, numDrivers, numTrips)
+    if name == 'RandomForest':
+        return classifiers.RandomForest(runPCA, sampleType, numDrivers, numTrips)
 
 def parseArgs():
     parser = argparse.ArgumentParser()
-    parser.add_argument("-c", "--clf", help="specify the ML algorithm to be used", 
-                        choices=['OneClassSVM', 'LogisticRegression'])
+    parser.add_argument("-c", "--clf", help="specify the ML algorithm to be used",
+                        choices=['OneClassSVM', 'LogisticRegression', 'RandomForest'])
     parser.add_argument("-rp", "--runpca", help="choose to enable PCA ", action="store_true")
     parser.add_argument("-s", "--sampleType", help="choose the sampling method to use", type=int, choices=[0, 1, 2])
     parser.add_argument("-d", "--numDrivers", help="indicate the number of drivers", type=int, default=1)
@@ -27,7 +29,7 @@ def parseArgs():
     return parser
 
 if __name__ == "__main__":
-    # Parse the command line args 
+    # Parse the command line args
     cmdParser = parseArgs()
     args = cmdParser.parse_args()
 
