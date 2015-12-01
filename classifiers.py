@@ -58,7 +58,7 @@ class Classifier(object):
             secondaryDriverKeys = map(lambda x:x/200, randomInts)
             secondaryDriverIDs = map(lambda x:self.globalFeatureHash.keys()[x], secondaryDriverKeys)
             secondaryTripKeys = map(lambda x:x%200, randomInts)
-            randomSampleTrips = map(lambda i:self.globalFeatureHash[secondaryDriverIDs[i]].values()[secondaryTripKeys[i]] , range(numTrips))
+            randomSampleTrips = map(lambda i:self.globalFeatureHash[secondaryDriverIDs[i]].values()[secondaryTripKeys[i]] , range(self.numTrips))
         else:
             # based on number of random drivers
             secondaryFeatureKeys = np.random.choice(self.globalFeatureHash.keys(), self.numDrivers, replace=False)
@@ -153,4 +153,4 @@ class RandomForest(Classifier):
         clf = RandomForestClassifier(n_estimators=200, criterion='entropy', max_depth=15, min_samples_leaf=5, n_jobs=-1)
 
         model = clf.fit(X, Y)
-        self.label = model.predict(X[:200])
+        self.label = model.predict_proba(X[:200])
