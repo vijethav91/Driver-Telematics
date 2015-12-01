@@ -12,7 +12,11 @@ from sklearn.ensemble import RandomForestClassifier
 class Classifier(object):
     baseFeatureFolder = "features/"
 
-    def __init__(self, clfName):
+    def __init__(self, clfName, sampleType=1, numDrivers=1, numTrips=1):
+        self.globalFeatureHash = {}
+        self.sampleType = sampleType
+        self.numDrivers = numDrivers
+        self.numTrips = numTrips
         self.clfName = clfName
         self.outputFileName = self.clfName + "_Output.csv"
 
@@ -33,6 +37,50 @@ class Classifier(object):
         infile.close()
 
         return temp
+
+    def loadAllFeatures(self, _driverDataFolder):
+        print "Loading all features"
+        for _driver in _driverDataFolder:
+            if _driver.startswith('.'):
+                continue
+            self.globalFeatureHash[_driver] = self.loadFeatures(_driver)
+        print "Done Loading all features"
+
+    def randomSampler(self, driver):
+        # create the positive trips
+        _X = self.globalFeatureHash[driver].values()
+
+        # create the negative trips based on sampleType
+        if self.sampleType == 1:
+            # based on number of random trips
+            totalTrips = len(self.globalFeatureHash)*200
+            randomInts = np.random.random_integers(0, totalTrips-1, self.numTrips)
+            secondaryDriverKeys = map(lambda x:x/200, randomInts)
+            secondaryDriverIDs = map(lambda x:self.globalFeatureHash.keys()[x], secondaryDriverKeys)
+            secondaryTripKeys = map(lambda x:x%200, randomInts)
+            randomSampleTrips = map(lambda i:self.globalFeatureHash[secondaryDriverIDs[i]].values()[secondaryTripKeys[i]] , range(numTrips))
+        else:
+            # based on number of random drivers
+            secondaryFeatureKeys = np.random.choice(self.globalFeatureHash.keys(), self.numDrivers, replace=False)
+            try:
+                secondaryFeatureKeys.remove(driver)
+                self.numDrivers = self.numDrivers - 1
+            except:
+                pass
+            if self.numTrips == 1:
+                randomSampleTrips = map(lambda x: self.globalFeatureHash[x].values()[np.random.choice(200, self.numTrips)], secondaryFeatureKeys)
+            else:
+                secondaryTripKeys = np.random.choice(200, self.numTrips)
+                randomTrips = map(lambda x: map(lambda i: self.globalFeatureHash[x].values()[i], secondaryTripKeys), secondaryFeatureKeys)
+                randomSampleTrips = reduce(lambda x,y: x+y, randomTrips)
+
+        # add the negative trips to X
+        _X.extend(randomSampleTrips)
+
+        # construct the labels for the two classess accordingly
+        _Y = np.append(np.ones(200), np.zeros(self.numDrivers*self.numTrips))
+
+        return _X, _Y
 
     def getPCA(self, X, numComponents):
         # normalize the features
@@ -77,58 +125,10 @@ class SimpleLogisticRegression(Classifier):
         clfName = 'SimpleLogisticRegression'
         if self.runpca:
             clfName = clfName + "_PCA"
-        super(SimpleLogisticRegression, self).__init__(clfName)
-        self.globalFeatureHash = {}
-        self.sampleType = sampleType
-        self.numDrivers = numDrivers
-        self.numTrips = numTrips
-
-    def loadAllFeatures(self, _driverDataFolder):
-        print "Loading all features"
-        for _driver in _driverDataFolder:
-            if _driver.startswith('.'):
-                continue
-            self.globalFeatureHash[_driver] = super(SimpleLogisticRegression, self).loadFeatures(_driver)
-        print "Done Loading all features"
-
-    def randomSampler(self, driver, sampleType=1, numDrivers=1, numTrips=1):
-        # create the positive trips
-        _X = self.globalFeatureHash[driver].values()
-
-        # create the negative trips based on sampleType
-        if sampleType == 1:
-            # based on number of random trips
-            totalTrips = len(self.globalFeatureHash)*200
-            randomInts = np.random.random_integers(0, totalTrips-1, numTrips)
-            secondaryDriverKeys = map(lambda x:x/200, randomInts)
-            secondaryDriverIDs = map(lambda x:self.globalFeatureHash.keys()[x], secondaryDriverKeys)
-            secondaryTripKeys = map(lambda x:x%200, randomInts)
-            randomSampleTrips = map(lambda i:self.globalFeatureHash[secondaryDriverIDs[i]].values()[secondaryTripKeys[i]] , range(numTrips))
-        else:
-            # based on number of random drivers
-            secondaryFeatureKeys = np.random.choice(self.globalFeatureHash.keys(), numDrivers, replace=False)
-            try:
-                secondaryFeatureKeys.remove(driver)
-                numDrivers = numDrivers - 1
-            except:
-                pass
-            if numTrips == 1:
-                randomSampleTrips = map(lambda x: self.globalFeatureHash[x].values()[np.random.choice(200, numTrips)], secondaryFeatureKeys)
-            else:
-                secondaryTripKeys = np.random.choice(200, numTrips)
-                randomTrips = map(lambda x: map(lambda i: self.globalFeatureHash[x].values()[i], secondaryTripKeys), secondaryFeatureKeys)
-                randomSampleTrips = reduce(lambda x,y: x+y, randomTrips)
-
-        # add the negative trips to X
-        _X.extend(randomSampleTrips)
-
-        # construct the labels for the two classess accordingly
-        _Y = np.append(np.ones(200), np.zeros(numDrivers*numTrips))
-
-        return _X, _Y
+        super(SimpleLogisticRegression, self).__init__(clfName, sampleType, numDrivers, numTrips)
 
     def runClassifier(self, _driverId, numComponents=0):
-        X, Y = self.randomSampler(_driverId, self.sampleType, self.numDrivers, self.numTrips)
+        X, Y = self.randomSampler(_driverId)
         if self.runpca:
             X = self.getPCA(X, numComponents)
         self.ids = self.globalFeatureHash[_driverId].keys()
@@ -141,63 +141,16 @@ class RandomForest(Classifier):
         self.runpca = runpca
         clfName = 'RandomForest'
         if self.runpca:
+            print "Runnign with PCA"
             clfName = clfName + "_PCA"
-        super(RandomForest, self).__init__(clfName)
-        self.globalFeatureHash = {}
-        self.sampleType = sampleType
-        self.numDrivers = numDrivers
-        self.numTrips = numTrips
-
-    def loadAllFeatures(self, _driverDataFolder):
-        print "Loading all features"
-        for _driver in _driverDataFolder:
-            if _driver.startswith('.'):
-                continue
-            self.globalFeatureHash[_driver] = super(RandomForest, self).loadFeatures(_driver)
-        print "Done Loading all features"
-
-    def randomSampler(self, driver, sampleType=1, numDrivers=1, numTrips=1):
-        # create the positive trips
-        _X = self.globalFeatureHash[driver].values()
-
-        # create the negative trips based on sampleType
-        if sampleType == 1:
-            # based on number of random trips
-            totalTrips = len(self.globalFeatureHash)*200
-            randomInts = np.random.random_integers(0, totalTrips-1, numTrips)
-            secondaryDriverKeys = map(lambda x:x/200, randomInts)
-            secondaryDriverIDs = map(lambda x:self.globalFeatureHash.keys()[x], secondaryDriverKeys)
-            secondaryTripKeys = map(lambda x:x%200, randomInts)
-            randomSampleTrips = map(lambda i:self.globalFeatureHash[secondaryDriverIDs[i]].values()[secondaryTripKeys[i]] , range(numTrips))
-        else:
-            # based on number of random drivers
-            secondaryFeatureKeys = np.random.choice(self.globalFeatureHash.keys(), numDrivers, replace=False)
-            try:
-                secondaryFeatureKeys.remove(driver)
-                numDrivers = numDrivers - 1
-            except:
-                pass
-            if numTrips == 1:
-                randomSampleTrips = map(lambda x: self.globalFeatureHash[x].values()[np.random.choice(200, numTrips)], secondaryFeatureKeys)
-            else:
-                secondaryTripKeys = np.random.choice(200, numTrips)
-                randomTrips = map(lambda x: map(lambda i: self.globalFeatureHash[x].values()[i], secondaryTripKeys), secondaryFeatureKeys)
-                randomSampleTrips = reduce(lambda x,y: x+y, randomTrips)
-
-        # add the negative trips to X
-        _X.extend(randomSampleTrips)
-
-        # construct the labels for the two classess accordingly
-        _Y = np.append(np.ones(200), np.zeros(numDrivers*numTrips))
-
-        return _X, _Y
+        super(RandomForest, self).__init__(clfName, sampleType, numDrivers, numTrips)
 
     def runClassifier(self, _driverId, numComponents=0):
-        X, Y = self.randomSampler(_driverId, self.sampleType, self.numDrivers, self.numTrips)
+        X, Y = self.randomSampler(_driverId)
         if self.runpca:
             X = self.getPCA(X, numComponents)
         self.ids = self.globalFeatureHash[_driverId].keys()
-        clf = RandomForestClassifier(n_estimators=100,max_depth=None,min_samples_split=1,random_state=0)
+        clf = RandomForestClassifier(n_estimators=200, criterion='entropy', max_depth=15, min_samples_leaf=5, n_jobs=-1)
 
         model = clf.fit(X, Y)
         self.label = model.predict(X[:200])
