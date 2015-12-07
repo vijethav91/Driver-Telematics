@@ -51,6 +51,7 @@ class Features:
         self.computeDistanceFeatures()
         self.computeSpeedFeatures()
         self.computeAccelerationFeatures()
+        self.computeAngleFeatures()
         self.composeFeatures()
 
     # Function to build the featureList for saving to csv
