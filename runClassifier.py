@@ -8,19 +8,23 @@ def writeCsv(clf, outputWriter):
     for i in range(200):
         outputWriter.writerow([clf.ids[i], clf.label[i]])
 
-def classifierFactory(name, runPCA, sampleType, numDrivers, numTrips):
+def classifierFactory(name, runDimRed, dimRedType, sampleType, numDrivers, numTrips):
     if name == 'OneClassSVM':
-        return classifiers.OneClassSVM(0.261, 0.05, runPCA)
+        return classifiers.OneClassSVM(0.261, 0.05, runDimRed, dimRedType)
     if name == 'LogisticRegression':
-        return classifiers.SimpleLogisticRegression(runPCA, sampleType, numDrivers, numTrips)
+        return classifiers.SimpleLogisticRegression(runDimRed, dimRedType, sampleType, numDrivers, numTrips)
     if name == 'RandomForest':
-        return classifiers.RandomForest(runPCA, sampleType, numDrivers, numTrips)
+        return classifiers.RandomForest(runDimRed, dimRedType, sampleType, numDrivers, numTrips)
+    if name == 'GBM':
+        return classifiers.GBM(runDimRed, dimRedType, sampleType, numDrivers, numTrips)
 
 def parseArgs():
     parser = argparse.ArgumentParser()
     parser.add_argument("-c", "--clf", help="specify the ML algorithm to be used",
-                        choices=['OneClassSVM', 'LogisticRegression', 'RandomForest'])
-    parser.add_argument("-rp", "--runpca", help="choose to enable PCA ", action="store_true")
+                        choices=['OneClassSVM', 'LogisticRegression', 'RandomForest', 'GBM'])
+    parser.add_argument("-rdr", "--runDimRed", help="choose to enable PCA ", action="store_true")
+    parser.add_argument("-dr", "--dimRedType", help="specify (if any) dimensionality reduction methods to use", 
+                        choices=['PCA', 'LDA', 'NMF', 'ICA'], default='')
     parser.add_argument("-s", "--sampleType", help="choose the sampling method to use", type=int, choices=[0, 1, 2])
     parser.add_argument("-d", "--numDrivers", help="indicate the number of drivers", type=int, default=1)
     parser.add_argument("-t", "--numTrips", help="indicate the number of trips", type=int, default=1)
@@ -32,11 +36,11 @@ if __name__ == "__main__":
     # Parse the command line args
     cmdParser = parseArgs()
     args = cmdParser.parse_args()
-
+    
     driverData = os.listdir(classifiers.Classifier.baseFeatureFolder)
 
     # call the factory method to instantiate the appropriate classifier
-    clf = classifierFactory(args.clf, args.runpca, args.sampleType, args.numDrivers, args.numTrips)
+    clf = classifierFactory(args.clf, args.runDimRed, args.dimRedType, args.sampleType, args.numDrivers, args.numTrips)
 
     # Running Logistic Regression with PCA
     if args.clf != 'OneClassSVM':

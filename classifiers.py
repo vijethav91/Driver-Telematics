@@ -3,22 +3,25 @@ import numpy as np
 import os
 
 from scipy import stats
-from sklearn.decomposition import PCA
+from sklearn.decomposition import PCA, NMF, FastICA
+from sklearn.discriminant_analysis import LinearDiscriminantAnalysis as LDA
+from sklearn.ensemble import GradientBoostingClassifier
+from sklearn.ensemble import RandomForestClassifier
 from sklearn.linear_model import LogisticRegression
 from sklearn.preprocessing import StandardScaler
 from sklearn.svm import OneClassSVM as OCSVM
-from sklearn.ensemble import RandomForestClassifier
 
 class Classifier(object):
     baseFeatureFolder = "features/"
 
-    def __init__(self, clfName, sampleType=1, numDrivers=1, numTrips=1):
+    def __init__(self, clfName, dimRedType='', sampleType=1, numDrivers=1, numTrips=1):
         self.globalFeatureHash = {}
         self.sampleType = sampleType
         self.numDrivers = numDrivers
         self.numTrips = numTrips
-        self.clfName = clfName
-        self.outputFileName = self.clfName + "_Output.csv"
+        self.clfName = clfName 
+        self.dimRedType = dimRedType
+        self.outputFileName = self.clfName + self. dimRedType + "_Output.csv"
 
     # Function to load the features from feature file
     def loadFeatures(self, _driverId):
@@ -86,19 +89,48 @@ class Classifier(object):
         # normalize the features
         X_std = StandardScaler().fit_transform(X)
 
-        # PCA
-        pca = PCA(numComponents)
-        pca.fit(X_std)
-        return pca.transform(X_std)
+        # Principal component analysis (PCA)
+        pca = PCA(n_components=numComponents)
+        X_pca = pca.fit_transform(X_std)
+        
+        return X_pca
+
+    def getNMF(self, X, numComponents):
+        # Non-Negative Matrix Factorization (NMF)
+        nmf = NMF(n_components=numComponents, init='random', random_state=0)
+        X_nmf = nmf.fit_transform(X)
+
+        return X_nmf
+
+    def getFastICA(self, X, numComponents):
+        # Independent Component Analysis (ICA)
+        ica = FastICA(n_components=numComponents)
+        X_ica = ica.fit_transform(X)
+
+        return X_ica
+
+    def getLDA(self, X, Y, numComponents):
+        # Linear Discriminant Analysis (LDA)
+        lda = LDA(n_components=numComponents)
+        X_lda = lda.fit_transform(X, Y)
+
+        return X_lda
+
+    def dimRed(self, X, Y, numComponents):
+        if self.dimRedType == 'PCA':
+            return self.getPCA(X, numComponents)
+        elif self.dimRedType == 'LDA':
+            return self.getLDA(X, Y, numComponents)
+        elif self.dimRedType == 'NMF':
+            return self.getNMF(X, numComponents)
+        elif self.dimRedType == 'ICA':
+            return self.getFastICA(X, numComponents)
 
 class OneClassSVM(Classifier):
 
-    def __init__(self, nu, gamma, runpca=False):
-        self.runpca = runpca
-        clfName = 'OneClassSVM'
-        if self.runpca:
-            clfName = clfName + "_PCA"
-        super(OneClassSVM, self).__init__(clfName)
+    def __init__(self, nu, gamma, runDimRed=False, dimRedType=''):
+        self.runDimRed = runDimRed
+        super(OneClassSVM, self).__init__('OneClassSVM', dimRedType)
         self.outliers_fraction = 0.03
         self.nu = nu
         self.gamma = gamma
@@ -109,8 +141,8 @@ class OneClassSVM(Classifier):
     def runClassifier(self, numComponents=0):
         X = self.featuresHash.values()
         self.ids = self.featuresHash.keys()
-        if self.runpca:
-            X = self.getPCA(X,numComponents)
+        if self.runDimRed:
+            X = self.dimRed(X, numComponents)
 
         clf = OCSVM(nu=self.nu, gamma=self.gamma)
         clf.fit(X)
@@ -120,37 +152,45 @@ class OneClassSVM(Classifier):
         self.label = map(int, self.label)
 
 class SimpleLogisticRegression(Classifier):
-    def __init__(self, runpca, sampleType=1, numDrivers=1, numTrips=1):
-        self.runpca = runpca
-        clfName = 'SimpleLogisticRegression'
-        if self.runpca:
-            clfName = clfName + "_PCA"
-        super(SimpleLogisticRegression, self).__init__(clfName, sampleType, numDrivers, numTrips)
+    def __init__(self, runDimRed, dimRedType='', sampleType=1, numDrivers=1, numTrips=1):
+        self.runDimRed = runDimRed
+        super(SimpleLogisticRegression, self).__init__('SimpleLogisticRegression', dimRedType, sampleType, numDrivers, numTrips)
 
     def runClassifier(self, _driverId, numComponents=0):
         X, Y = self.randomSampler(_driverId)
-        if self.runpca:
-            X = self.getPCA(X, numComponents)
+        if self.runDimRed:
+            X = self.dimRed(X, Y, numComponents)
         self.ids = self.globalFeatureHash[_driverId].keys()
         clf = LogisticRegression(class_weight='auto')
         model = clf.fit(X, Y)
-        self.label = model.predict(X[:200])
+        self.label = model.predict_proba(X[:200]).T[1]
 
 class RandomForest(Classifier):
-    def __init__(self, runpca, sampleType=1, numDrivers=1, numTrips=1):
-        self.runpca = runpca
-        clfName = 'RandomForest'
-        if self.runpca:
-            print "Runnign with PCA"
-            clfName = clfName + "_PCA"
-        super(RandomForest, self).__init__(clfName, sampleType, numDrivers, numTrips)
+    def __init__(self, runDimRed, dimRedType='', sampleType=1, numDrivers=1, numTrips=1):
+        self.runDimRed = runDimRed
+        super(RandomForest, self).__init__('RandomForest', dimRedType, sampleType, numDrivers, numTrips)
 
     def runClassifier(self, _driverId, numComponents=0):
         X, Y = self.randomSampler(_driverId)
-        if self.runpca:
-            X = self.getPCA(X, numComponents)
+        if self.runDimRed:
+            X = self.dimRed(X, Y, numComponents)
         self.ids = self.globalFeatureHash[_driverId].keys()
         clf = RandomForestClassifier(n_estimators=200, criterion='entropy', max_depth=15, min_samples_leaf=5, n_jobs=-1)
 
         model = clf.fit(X, Y)
-        self.label = model.predict_proba(X[:200])
+        self.label = model.predict_proba(X[:200]).T[1]
+
+class GBM(Classifier):
+    def __init__(self, runDimRed, dimRedType='', sampleType=1, numDrivers=1, numTrips=1):
+        self.runDimRed = runDimRed
+        super(GBM, self).__init__('GBM', dimRedType, sampleType, numDrivers, numTrips)
+
+    def runClassifier(self, _driverId, numComponents=0):
+        X, Y = self.randomSampler(_driverId)
+        if self.runDimRed:
+            X = self.dimRed(X, Y, numComponents)
+        self.ids = self.globalFeatureHash[_driverId].keys()
+        clf = GradientBoostingClassifier(n_estimators=200, learning_rate=0.5, max_depth=15, min_samples_leaf=5)
+
+        model = clf.fit(X, Y)
+        self.label = model.predict_proba(X[:200]).T[1]
