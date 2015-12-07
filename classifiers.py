@@ -138,7 +138,7 @@ class OneClassSVM(Classifier):
     def loadFeatures(self, _driverId):
         self.featuresHash = super(OneClassSVM, self).loadFeatures(_driverId)
 
-    def runClassifier(self, numComponents=0):
+    def runClassifier(self, _driverId, numComponents=0):
         X = self.featuresHash.values()
         self.ids = self.featuresHash.keys()
         if self.runDimRed:
@@ -161,7 +161,7 @@ class SimpleLogisticRegression(Classifier):
         if self.runDimRed:
             X = self.dimRed(X, Y, numComponents)
         self.ids = self.globalFeatureHash[_driverId].keys()
-        clf = LogisticRegression(class_weight='auto')
+        clf = LogisticRegression(class_weight='balanced')
         model = clf.fit(X, Y)
         self.label = model.predict_proba(X[:200]).T[1]
 
