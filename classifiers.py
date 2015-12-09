@@ -224,6 +224,6 @@ class MLP(Classifier):
         self.ids = self.globalFeatureHash[_driverId].keys()
 
         self.model.compile(loss='mean_squared_error', optimizer=self.sgd)
-        self.model.fit(X, Y, nb_epoch=100)
+        self.model.fit(X, Y, nb_epoch=500)
 
-        self.label = self.model.predict_proba(X)
+        self.label = self.model.predict_proba(X).T[0]
