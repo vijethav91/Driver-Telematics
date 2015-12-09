@@ -2,6 +2,9 @@ import csv
 import numpy as np
 import os
 
+from keras.models import Sequential
+from keras.layers.core import Dense, Dropout, Activation
+from keras.optimizers import SGD
 from scipy import stats
 from sklearn.decomposition import PCA, NMF, FastICA
 from sklearn.discriminant_analysis import LinearDiscriminantAnalysis as LDA
@@ -194,3 +197,33 @@ class GBM(Classifier):
 
         model = clf.fit(X, Y)
         self.label = model.predict_proba(X[:200]).T[1]
+
+class MLP(Classifier):
+    def __init__(self, runDimRed, dimRedType='', sampleType=1, numDrivers=1, numTrips=1):
+        self.runDimRed = runDimRed
+        super(MLP, self).__init__('MultilayerPerceptron', dimRedType, sampleType, numDrivers, numTrips)
+        self.initmodel()
+        self.sgd = SGD(lr=0.1, decay=1e-6, momentum=0.9, nesterov=True)
+
+    def initmodel(self):
+        self.model = Sequential()
+        self.model.add(Dense(64, input_dim=50, init='uniform'))
+        self.model.add(Activation('tanh'))
+        self.model.add(Dropout(0.5))
+        self.model.add(Dense(64, init='uniform'))
+        self.model.add(Activation('tanh'))
+        self.model.add(Dropout(0.5))
+        self.model.add(Dense(1, init='uniform'))
+        self.model.add(Activation('softmax'))
+
+    def runClassifier(self, _driverId, numComponents=0):
+        X, Y = self.randomSampler(_driverId)
+        if self.runDimRed:
+            X = self.dimRed(X, Y, numComponents)
+
+        self.ids = self.globalFeatureHash[_driverId].keys()
+
+        self.model.compile(loss='mean_squared_error', optimizer=self.sgd)
+        self.model.fit(X, Y, nb_epoch=500)
+
+        self.label = self.model.predict_proba(X).T[0]

@@ -17,11 +17,13 @@ def classifierFactory(name, runDimRed, dimRedType, sampleType, numDrivers, numTr
         return classifiers.RandomForest(runDimRed, dimRedType, sampleType, numDrivers, numTrips)
     if name == 'GBM':
         return classifiers.GBM(runDimRed, dimRedType, sampleType, numDrivers, numTrips)
+    if name == 'MLP':
+        return classifiers.MLP(runDimRed, dimRedType, sampleType, numDrivers, numTrips)
 
 def parseArgs():
     parser = argparse.ArgumentParser()
     parser.add_argument("-c", "--clf", help="specify the ML algorithm to be used",
-                        choices=['OneClassSVM', 'LogisticRegression', 'RandomForest', 'GBM'])
+                        choices=['OneClassSVM', 'LogisticRegression', 'RandomForest', 'GBM', 'MLP'])
     parser.add_argument("-rdr", "--runDimRed", help="choose to enable PCA ", action="store_true")
     parser.add_argument("-dr", "--dimRedType", help="specify (if any) dimensionality reduction methods to use", 
                         choices=['PCA', 'LDA', 'NMF', 'ICA'], default='')
