@@ -2,8 +2,10 @@ import csv
 import numpy as np
 import os
 
-from keras.models import Sequential
 from keras.layers.core import Dense, Dropout, Activation
+from keras.layers.embeddings import Embedding
+from keras.layers.recurrent import LSTM
+from keras.models import Sequential
 from keras.optimizers import SGD
 from scipy import stats
 from sklearn.decomposition import PCA, NMF, FastICA
@@ -11,6 +13,7 @@ from sklearn.discriminant_analysis import LinearDiscriminantAnalysis as LDA
 from sklearn.ensemble import GradientBoostingClassifier
 from sklearn.ensemble import RandomForestClassifier
 from sklearn.linear_model import LogisticRegression
+from sklearn.neural_network import MLPClassifier
 from sklearn.preprocessing import StandardScaler
 from sklearn.svm import OneClassSVM as OCSVM
 
@@ -227,3 +230,19 @@ class MLP(Classifier):
         self.model.fit(X, Y, nb_epoch=500)
 
         self.label = self.model.predict_proba(X).T[0]
+
+class sciMLP(Classifier):
+    def __init__(self, runDimRed, dimRedType='', sampleType=1, numDrivers=1, numTrips=1):
+        print "Running sciMLP"
+        self.runDimRed = runDimRed
+        super(sciMLP, self).__init__('sciMLP', dimRedType, sampleType, numDrivers, numTrips)
+
+    def runClassifier(self, _driverId, numComponents=0):
+        X, Y = self.randomSampler(_driverId)
+        if self.runDimRed:
+            X = self.dimRed(X, Y, numComponents)
+        self.ids = self.globalFeatureHash[_driverId].keys()
+        clf = MLPClassifier(algorithm='l-bfgs', alpha=1e-5, hidden_layer_sizes=(10, 5), random_state=1)
+
+        model = clf.fit(X, Y)
+        self.label = model.predict_proba(X[:200]).T[1]
