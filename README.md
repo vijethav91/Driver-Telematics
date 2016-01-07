@@ -2,7 +2,7 @@
 
 In this projet, we worked on the [Kaggle challenge](https://www.kaggle.com/c/axa-driver-telematics-analysis) to identify a driver signature using telematic data. The dataset consists of 50,000 anonymized driver trips provided by AXA. 
 
-We aim to devise a telematic fingerprint for each driver and evaluate the different feature selection/dimensionality reduction methods as well as classification algorithms. This telematic fingerprint would then be able to predict if the given trip was undertaken by the designated driver.
+We devised a telematic fingerprint for each driver and evaluated the different feature selection/dimensionality reduction methods as well as classification algorithms. This telematic fingerprint would then be able to predict if the given trip was undertaken by the designated driver.
 
 # Feature Extraction
 We generated the following group of features based on 
